@@ -1,0 +1,21 @@
+{
+  "name": "IgniteCalc Ultimate Suite",
+  "short_name": "IgniteCalc",
+  "description": "Professional Calculation Suite with History tracking",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0c0f1a",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "images/Flamez_Dev.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "images/Flamez_Dev.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
