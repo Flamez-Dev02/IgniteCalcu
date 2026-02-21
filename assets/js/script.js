@@ -31,6 +31,7 @@ let stdOperation = null;
 let sciCurrent = '0';
 let sciPrevious = '';
 let sciOperation = null;
+let sciUnaryOp = null;
 
 // --- CGPA State ---
 let courses = [{ id: 1, title: '', unit: '', grade: '5' }];
@@ -252,8 +253,8 @@ function renderScientificCalc() {
         <section class="tab-content active w-full max-w-[650px]">
             <div class="calc-card glass p-8 rounded-[3rem] shadow-2xl">
                 <div class="display bg-black/40 rounded-[2rem] p-8 mb-8 text-right flex flex-col justify-end min-h-[160px] border border-white/5 shadow-inner">
-                    <div class="text-slate-500 text-lg font-medium opacity-60 mb-2">${sciPrevious} ${sciOperation || ''}</div>
-                    <div class="text-5xl font-black font-outfit tracking-tighter">${sciCurrent}</div>
+                    <div class="text-slate-500 text-lg font-medium opacity-60 mb-2">${sciPrevious} ${sciOperation || ''} ${sciUnaryOp ? sciUnaryOp + '(' : ''}</div>
+                    <div class="text-5xl font-black font-outfit tracking-tighter">${sciCurrent}${sciUnaryOp ? ')' : ''}</div>
                 </div>
                 <div class="grid grid-cols-5 gap-3">
                     ${['sin', 'cos', 'tan'].map(f => `<button class="calc-btn bg-indigo-500/10 text-indigo-400 p-4 rounded-xl font-bold italic" data-func="${f}">${f}</button>`).join('')}
@@ -415,7 +416,7 @@ function setupEventListeners() {
     });
     document.querySelectorAll('[data-op-sci]').forEach(btn => {
         btn.onclick = () => {
-            if (sciPrevious) performSciCalc();
+            if (sciPrevious || sciUnaryOp) performSciCalc();
             sciOperation = btn.dataset.opSci;
             sciPrevious = sciCurrent;
             sciCurrent = '0';
@@ -424,29 +425,33 @@ function setupEventListeners() {
     });
     document.querySelectorAll('[data-func]').forEach(btn => {
         btn.onclick = () => {
-            const val = parseFloat(sciCurrent);
+            const func = btn.dataset.func;
+            const prefixFuncs = ['sin', 'cos', 'tan', 'log', 'ln', 'sqrt', 'abs'];
+            
+            if (prefixFuncs.includes(func)) {
+                sciUnaryOp = func;
+                renderApp();
+                return;
+            }
+
             let res;
-            let opStr = `${btn.dataset.func}(${val})`;
-            switch (btn.dataset.func) {
-                case 'sin': res = Math.sin(val * Math.PI / 180); break;
-                case 'cos': res = Math.cos(val * Math.PI / 180); break;
-                case 'tan': res = Math.tan(val * Math.PI / 180); break;
-                case 'log': res = Math.log10(val); break;
-                case 'ln': res = Math.log(val); break;
-                case 'sqrt': res = Math.sqrt(val); break;
-                case 'pow2': res = Math.pow(val, 2); break;
+            let opStr;
+            const val = parseFloat(sciCurrent);
+            switch (func) {
+                case 'pow2': res = Math.pow(val, 2); opStr = `${val}²`; break;
                 case 'pi': res = Math.PI; opStr = "π"; break;
                 case 'e': res = Math.E; opStr = "e"; break;
-                case 'abs': res = Math.abs(val); break;
                 case 'rand': res = Math.random(); opStr = "RANDOM"; break;
             }
-            sciCurrent = res.toFixed(8).replace(/\.?0+$/, "");
-            saveHistory({ type: 'SCIENTIFIC', operation: opStr, result: sciCurrent });
-            renderApp();
+            if (res !== undefined) {
+                sciCurrent = res.toString().includes('.') ? res.toFixed(8).replace(/\.?0+$/, "") : res.toString();
+                saveHistory({ type: 'SCIENTIFIC', operation: opStr, result: sciCurrent });
+                renderApp();
+            }
         };
     });
     const clearSciBtn = document.querySelector('[data-action="clear-sci"]');
-    if (clearSciBtn) clearSciBtn.onclick = () => { sciCurrent = '0'; sciPrevious = ''; sciOperation = null; renderApp(); };
+    if (clearSciBtn) clearSciBtn.onclick = () => { sciCurrent = '0'; sciPrevious = ''; sciOperation = null; sciUnaryOp = null; renderApp(); };
     
     const delSciBtn = document.querySelector('[data-action="del-sci"]');
     if (delSciBtn) delSciBtn.onclick = () => { sciCurrent = sciCurrent.length > 1 ? sciCurrent.slice(0,-1) : '0'; renderApp(); };
@@ -501,23 +506,52 @@ function performStdCalc(save = false) {
 }
 
 function performSciCalc(save = false) {
-    let res;
+    if (sciUnaryOp) {
+        const val = parseFloat(sciCurrent);
+        if (!isNaN(val)) {
+            let res;
+            switch (sciUnaryOp) {
+                case 'sin': res = Math.sin(val * Math.PI / 180); break;
+                case 'cos': res = Math.cos(val * Math.PI / 180); break;
+                case 'tan': res = Math.tan(val * Math.PI / 180); break;
+                case 'log': res = Math.log10(val); break;
+                case 'ln': res = Math.log(val); break;
+                case 'sqrt': res = Math.sqrt(val); break;
+                case 'abs': res = Math.abs(val); break;
+            }
+            if (res !== undefined) {
+                const opStr = `${sciUnaryOp}(${val})`;
+                sciCurrent = res.toFixed(8).replace(/\.?0+$/, "");
+                if (save && !sciOperation) {
+                    saveHistory({ type: 'SCIENTIFIC', operation: opStr, result: sciCurrent });
+                }
+                sciUnaryOp = null;
+            }
+        }
+    }
+
     const p = parseFloat(sciPrevious);
     const c = parseFloat(sciCurrent);
     if (isNaN(p) || isNaN(c)) return;
     const op = sciOperation;
+    if (!op) return;
+
+    let binRes;
     switch (op) {
-        case '+': res = p + c; break;
-        case '-': res = p - c; break;
-        case '*': res = p * c; break;
-        case '/': res = p / c; break;
-        case '^': res = Math.pow(p, c); break;
+        case '+': binRes = p + c; break;
+        case '-': binRes = p - c; break;
+        case '*': binRes = p * c; break;
+        case '/': binRes = p / c; break;
+        case '^': binRes = Math.pow(p, c); break;
     }
-    const resultStr = res.toString();
-    if (save) saveHistory({ type: 'SCIENTIFIC', operation: `${p} ${op} ${c}`, result: resultStr });
-    sciCurrent = resultStr;
-    sciPrevious = '';
-    sciOperation = null;
+    
+    if (binRes !== undefined) {
+        const resultStr = binRes.toString();
+        if (save) saveHistory({ type: 'SCIENTIFIC', operation: `${p} ${op} ${c}`, result: resultStr });
+        sciCurrent = resultStr;
+        sciPrevious = '';
+        sciOperation = null;
+    }
 }
 
 function removeCourseRow(id) {
