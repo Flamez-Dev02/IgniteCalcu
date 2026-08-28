@@ -2,7 +2,7 @@
 
 ## Overview
 
-IgniteCalc is a high-performance, professional-grade web application designed to provide a comprehensive suite of calculation tools. Developed using a lightweight architecture, the application emphasizes speed, precision, and visual excellence. It leverages modern web standards to deliver a premium user experience without the overhead of heavy frameworks like React.
+IgniteCalc is a high performance, professional-grade web application designed to provide a comprehensive suite of calculation tools. Developed using a lightweight architecture, the application emphasizes speed, precision, and visual excellence. It leverages modern web standards to deliver a premium user experience without the overhead of heavy frameworks like React.
 
 ## Key Features
 
